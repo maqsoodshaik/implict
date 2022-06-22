@@ -1,0 +1,10 @@
+.github
+.vscode
+output
+runs
+sample
+video_128
+._.*
+*.csv
+README.md
+video_only_128.py
