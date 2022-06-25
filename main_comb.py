@@ -98,8 +98,7 @@ if __name__ == "__main__":
     sequence_length = 30
     hidden_size = 2000
     num_layers = 3
-    loss_hyp=0.8
-
+    loss_hyp=1
 
 
     org_path = os.getcwd()
@@ -266,7 +265,7 @@ if __name__ == "__main__":
             for k in range(data1.size(0)):
                 images_o,outputs_fc_s = model_fc(data1[k])
                 images = torch.cat((images,images_o))
-                loss_fc += criterion_fc(outputs_fc_s, labels[k].reshape(1,1).expand(sequence_length, 1))
+                loss_fc += criterion_fc(outputs_fc_s, labels[k].reshape(1,1).expand(sequence_length*3, 1))
                 # Backward and optimize
                 # optimizer_fc.zero_grad()
                 # loss_fc.backward()
@@ -278,7 +277,6 @@ if __name__ == "__main__":
 
             loss_fc = loss_fc/data1.size(0)
             images = images.reshape(-1, sequence_length, input_size).to(device)
-            # print(images.shape)
             labels = labels.to(device)
             num_samples+=labels.size(0)
             # Forward pass
@@ -286,8 +284,12 @@ if __name__ == "__main__":
             # print(f'outputs.shape:{outputs.shape}')
             # print(labels.shape)
             # outputs = outputs.squeeze()
+            outputs,outputs_weak,outputs_strong =outputs.chunk(3)
             loss = criterion(outputs, labels.unsqueeze(1))
-            loss +=loss_hyp*loss_fc
+            # max_probs, targets_u = torch.max(outputs_weak, dim=-1)
+            Lu_s = (criterion(outputs_strong, labels.unsqueeze(1)))
+            Lu_w = (criterion(outputs_weak, labels.unsqueeze(1)))
+            loss +=loss_hyp*(loss_fc+Lu_w+Lu_s)
             # Backward and optimize
             optimizer.zero_grad()
             loss.backward()
@@ -323,12 +325,13 @@ if __name__ == "__main__":
                 for k in range(data1.size(0)):
                     images_o,outputs_fc_s = model_fc(data1[k])
                 
-                    loss_fc += criterion_fc(outputs_fc_s, labels[k].reshape(1,1).expand(sequence_length, 1))
+                    loss_fc += criterion_fc(outputs_fc_s, labels[k].reshape(1,1).expand(sequence_length*3, 1))
                 loss_fc = loss_fc/data1.size(0)
                 images = images.reshape(-1, sequence_length, input_size).to(device)
                 labels = labels.to(device)
                 num_samples_val+=labels.size(0)
                 outputs = model(images)
+                outputs,_,_ = outputs.chunk(3)
                 predicted = (outputs > 0.5).long()
                 correct_val += (predicted.squeeze()== labels).sum().item()
 
